@@ -117,9 +117,12 @@
     const ph = atlasPhase === "done" ? "finished" : atlasPhase === "merging" ? "atlas reviewing the results" : par ? par + " specialist" + (par > 1 ? "s" : "") + " streaming in parallel" : order.length ? "specialists assigned" : "atlas reading the job & planning";
     tagEl.textContent = src + " · " + (meta.hold || ph);
   }
+  let orchVisible = true;
+  new IntersectionObserver((es) => es.forEach((e) => { orchVisible = e.isIntersecting; }), { rootMargin: "120px" }).observe(root);
   function tick() {
     const t = now();
     while (queue.length && runStart + queue[0].t * 1000 <= t) apply(queue.shift());
+    if (!orchVisible || document.hidden) { setTimeout(tick, 200); return; }   // keep the clock, skip the paint
     render();
     requestAnimationFrame(tick);
   }

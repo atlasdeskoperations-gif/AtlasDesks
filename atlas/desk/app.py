@@ -825,9 +825,10 @@ def api_run_task():
 
 @app.get("/api/runs")
 def api_runs():
-    rows = ds().runs(100)
+    rows = ds().runs(60)
     for r in rows:
         r["active"] = r["id"] in _runs and _runs[r["id"]]["thread"].is_alive()
+        r["summary"] = (r.get("summary") or "")[:160]        # the list only needs a teaser; /api/runs/<id> has the full text
     return jsonify(rows)
 
 

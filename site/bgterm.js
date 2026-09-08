@@ -89,16 +89,18 @@
   function build(film, i) {
     film.querySelectorAll("video").forEach((v) => v.remove());
     const cv = document.createElement("canvas"); film.appendChild(cv);
-    const ctx = cv.getContext("2d", { alpha: true });
+    const vctx = cv.getContext("2d", { alpha: true });
+    const off = document.createElement("canvas");                 // scene is drawn here, then blurred once onto cv
+    const ctx = off.getContext("2d", { alpha: true });
     const panes = [];
     const seed = i * 7;
     const names = ["atlas · run 4812", "bash — deploy", "research · northgate", "vision · yard cam", "qa · policy", "scheduler"];
     for (let k = 0; k < 6; k++) panes.push({ m: k === 2 ? mkTokens("claude-haiku-4.5 · streaming", seed + k) : mkTerm(names[k], seed + k * 5), u: 0, v: 0, w: 0, h: 0, ph: Math.random() * 6.28 });
-    const state = { cv, ctx, panes, W: 0, H: 0, S: 0.5, visible: false, last: 0, film };
+    const state = { cv, vctx, off, ctx, panes, W: 0, H: 0, S: 0.45, visible: false, last: 0, film };
     const size = () => {
       const r = film.getBoundingClientRect();
       state.W = Math.max(320, r.width); state.H = Math.max(240, r.height);
-      cv.width = Math.round(state.W * state.S); cv.height = Math.round(state.H * state.S);
+      cv.width = off.width = Math.round(state.W * state.S); cv.height = off.height = Math.round(state.H * state.S);
       // grid: 3 columns x 2 rows on desktop; panes overflow the edges a little so the blur has no frame
       const cols = state.W > 900 ? 3 : 2, rows = cols === 3 ? 2 : 3;
       const cw = state.W / cols, ch = state.H / rows;
@@ -123,10 +125,8 @@
   function drawPane(ctx, p, S, t) {
     const x = (p.u + Math.sin(t / 4200 + p.ph) * 14) * S, y = (p.v + Math.cos(t / 5100 + p.ph) * 10) * S;
     const w = p.w * S, h = p.h * S, r = 3 * S;
-    ctx.save();
-    ctx.shadowColor = "rgba(16,22,29,.16)"; ctx.shadowBlur = 24 * S; ctx.shadowOffsetY = 8 * S;
+    ctx.fillStyle = "rgba(16,22,29,.07)"; ctx.beginPath(); roundRect(ctx, x, y + 5 * S, w, h, r); ctx.fill();   // cheap drop shadow (shadowBlur is slow)
     ctx.fillStyle = C.paper; ctx.beginPath(); roundRect(ctx, x, y, w, h, r); ctx.fill();
-    ctx.restore();
     ctx.strokeStyle = C.line; ctx.lineWidth = 1; ctx.beginPath(); roundRect(ctx, x + .5, y + .5, w - 1, h - 1, r); ctx.stroke();
     // title bar
     const bh = 22 * S;
@@ -176,10 +176,18 @@
   }
 
   const states = films.map(build);
+  const canFilter = "filter" in CanvasRenderingContext2D.prototype;
+  function blit(s) {                                       // one blur pass at half resolution, then the GPU only upscales
+    const v = s.vctx; v.clearRect(0, 0, s.cv.width, s.cv.height);
+    if (canFilter) v.filter = "blur(2px) saturate(1.05)";
+    v.drawImage(s.off, 0, 0);
+    if (canFilter) v.filter = "none";
+  }
   if (rm) {
     states.forEach((s) => {
       s.ctx.clearRect(0, 0, s.cv.width, s.cv.height);
       s.panes.forEach((p) => { for (let k = 0; k < 40; k++) p.m.kind === "term" ? stepTerm(p.m, 400) : stepTok(p.m, 400); drawPane(s.ctx, p, s.S, 0); });
+      blit(s);
     });
     return;
   }
@@ -190,13 +198,14 @@
     if (!document.hidden) states.forEach((s) => {
       s.panes.forEach((p) => p.m.kind === "term" ? stepTerm(p.m, dt) : stepTok(p.m, dt));
       if (!s.visible) return;
-      if (now - s.last < 41) return;                       // ~24 fps is plenty under a blur
+      if (now - s.last < 50) return;                       // 20 fps is plenty under a blur
       s.last = now;
       const ctx = s.ctx; ctx.clearRect(0, 0, s.cv.width, s.cv.height);
       ctx.strokeStyle = "rgba(45,114,210,.05)"; ctx.lineWidth = 1;
       for (let gx = 0; gx < s.cv.width; gx += 48 * s.S) { ctx.beginPath(); ctx.moveTo(gx, 0); ctx.lineTo(gx, s.cv.height); ctx.stroke(); }
       for (let gy = 0; gy < s.cv.height; gy += 48 * s.S) { ctx.beginPath(); ctx.moveTo(0, gy); ctx.lineTo(s.cv.width, gy); ctx.stroke(); }
       s.panes.forEach((p) => drawPane(ctx, p, s.S, now));
+      blit(s);
     });
     requestAnimationFrame(frame);
   }

@@ -54,7 +54,7 @@ section.tight { padding: 64px 0; }
 section.alt { background: var(--bg2); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
 
 /* nav */
-.nav { position: sticky; top: 0; z-index: 50; backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); background: rgba(245,247,250,.84); border-bottom: 1px solid var(--line); }
+.nav { position: sticky; top: 0; z-index: 50; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); background: rgba(245,247,250,.84); border-bottom: 1px solid var(--line); }
 .nav .wrap { display: flex; align-items: center; justify-content: space-between; height: 64px; }
 .nav ul a.on { color: var(--text); }
 .nav ul a.live { color: var(--accent); }

@@ -55,7 +55,7 @@
   // ---- inertia scroll --------------------------------------------------------------
   let lenis = null;
   if (window.Lenis) {
-    lenis = new window.Lenis({ lerp: 0.085, smoothWheel: true, wheelMultiplier: 1 });
+    lenis = new window.Lenis({ lerp: 0.13, smoothWheel: true, wheelMultiplier: 1 });
     lenis.on("scroll", () => { ST.update(); onScroll(); window.Orbit && window.Orbit.setScroll(window.scrollY); });
     G.ticker.add((t) => lenis.raf(t * 1000));
     G.ticker.lagSmoothing(0);

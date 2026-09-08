@@ -7,7 +7,7 @@ html.lenis { scroll-behavior: auto; }
 /* background film: a blurred canvas of terminals running scripts and a model streaming tokens (bgterm.js), washed to paper so type stays crisp */
 .film { position: absolute; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; background: var(--bg2); }
 .film video { display: none; }
-.film canvas { position: absolute; inset: -3%; width: 106%; height: 106%; filter: blur(4.5px) saturate(1.05); opacity: 0; transition: opacity 1.6s ease; }
+.film canvas { position: absolute; inset: -3%; width: 106%; height: 106%; opacity: 0; transition: opacity 1.6s ease; }
 .film canvas.on { opacity: 1; }
 .film::after { content: ""; position: absolute; inset: 0; background:
   linear-gradient(90deg, rgba(245,247,250,.82) 0%, rgba(245,247,250,.6) 36%, rgba(245,247,250,.3) 60%, rgba(245,247,250,.12) 100%),

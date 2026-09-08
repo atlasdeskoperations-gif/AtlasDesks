@@ -72,7 +72,14 @@
     setDet("downloading yolov8n.onnx…", "busy");
     const buf = await fetchWithProgress(MODEL_URL, (p) => { if (bar) bar.style.transform = "scaleX(" + p.toFixed(3) + ")"; });
     setDet("compiling…", "busy");
-    session = await ort.InferenceSession.create(buf, { executionProviders: ["wasm"], graphOptimizationLevel: "all" });
+    const opts = { executionProviders: ["wasm"], graphOptimizationLevel: "all" };
+    try {                                                   // run the model in a worker so scrolling/typing never stalls
+      ort.env.wasm.proxy = true;
+      session = await ort.InferenceSession.create(buf, opts);
+    } catch (e) {
+      ort.env.wasm.proxy = false;                           // no worker allowed here → main thread, throttled in loop()
+      session = await ort.InferenceSession.create(buf, opts);
+    }
     if (bar) bar.style.opacity = "0";
     setDet("yolov8n · live", "ok");
   }
@@ -124,10 +131,13 @@
     countsEl.innerHTML = parts.length ? parts.join(" <i>·</i> ") : "<span class='muted'>nothing above " + Math.round(CONF * 100) + "% confidence</span>";
   }
 
-  let frames = 0, fpsT = performance.now();
+  let frames = 0, fpsT = performance.now(), lastRun = 0;
+  const MIN_GAP_MS = 120;                                  // ~8 inferences/s is plenty for a demo feed
   async function loop() {
     if (!running) return;
+    if (performance.now() - lastRun < MIN_GAP_MS) { requestAnimationFrame(loop); return; }
     if (video.readyState >= 2 && !video.paused && session) {
+      lastRun = performance.now();
       const lb = letterbox();
       if (lb) {
         const t0 = performance.now();
@@ -245,8 +255,10 @@
     try { await loadDetector(); } catch (e) { setDet("detector failed: " + (e.message || e), "err"); return; }
     running = true; loop();
   }
-  // start only when the section is close — don't pull 12 MB for visitors who never scroll here
-  new IntersectionObserver((es) => { if (es.some((e) => e.isIntersecting)) start(); }, { rootMargin: "400px" }).observe(sec);
+  // start only once the section is actually on screen and the page has finished loading — never pull 12 MB
+  // while the hero is still painting, and never for visitors who don't scroll here
+  const afterLoad = (fn) => document.readyState === "complete" ? setTimeout(fn, 300) : window.addEventListener("load", () => setTimeout(fn, 300), { once: true });
+  new IntersectionObserver((es) => { if (es.some((e) => e.isIntersecting)) afterLoad(start); }, { rootMargin: "0px", threshold: 0.2 }).observe(sec);
   // pause work when the section is far off-screen or the tab is hidden
   new IntersectionObserver((es) => { const on = es.some((e) => e.isIntersecting); if (started && session) { running = on; if (on) loop(); } if (on) video.play().catch(() => {}); else if (!useCam) video.pause(); }, { rootMargin: "100px" }).observe(sec);
   document.addEventListener("visibilitychange", () => { if (document.hidden) { running = false; } else if (started && session) { running = true; loop(); } });

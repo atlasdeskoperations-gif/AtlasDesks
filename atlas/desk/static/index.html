@@ -605,7 +605,7 @@ function toast(m){ const t=$('#toast'); t.textContent=m; t.classList.add('on'); 
 function go(p){ if(p==='design'){ page=p; openStudio(false); return; } page=p; if(location.hash!=='#'+p) history.replaceState(null,'','#'+p); document.querySelectorAll('main > section').forEach(s=>s.classList.toggle('hide', s.id!=='p-'+p)); document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('on', b.dataset.p===p)); refresh(); }
 document.querySelectorAll('#nav button').forEach(b=>b.onclick=()=>go(b.dataset.p));
 
-async function init(){ if (!(await loadCfg())) return; const h=location.hash.slice(1); if(h && document.getElementById('p-'+h)) go(h); else refresh(); setInterval(refresh, 2500); }
+async function init(){ if (!(await loadCfg())) return; const h=location.hash.slice(1); if(h && document.getElementById('p-'+h)) go(h); else refresh(); setInterval(() => { if (!document.hidden) refresh(); }, 2500); }
 async function loadCfg(){
   CFG = await api('/config');
   if (CFG && CFG.needs_desk) { await showOnboarding(); return false; }
